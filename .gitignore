@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+
+data/images/
+data/cards.db
+data/scryfall_cards.json
+cache/
+data/*.json
+data/*.sqlite
+venv/
+data/scryfall_version.txt
+
