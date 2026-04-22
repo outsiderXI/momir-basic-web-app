@@ -1,0 +1,16 @@
+[Unit]
+Description=Momir Vig Printer Web App
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Momir-Vig-Printer
+ExecStart=/home/pi/Momir-Vig-Printer/venv/bin/python /home/pi/Momir-Vig-Printer/app.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
