@@ -54,16 +54,23 @@ def show_quote():
     console.print()
 
 
-def generate_ascii_art(image_path=None, max_width=None):
-    image_path = Path(image_path or "assets/momir_vig.png")
+def show_splash(delay=0.045):
+    console.clear()
+
+    image_path = Path("assets/momir_vig.png")
     if not image_path.exists():
-        return ["MOMIR VIG PRINTER"]
+        console.print(
+            Panel(
+                Align.center(Text("MOMIR VIG PRINTER", style="bold bright_green")),
+                border_style="bright_green",
+                padding=(1, 2),
+            )
+        )
+        return
 
-    if max_width is None:
-        max_width = max(24, shutil.get_terminal_size().columns - 10)
-
+    term_width = shutil.get_terminal_size().columns
     img = Image.open(image_path)
-    scale = min(max_width / img.width, 1)
+    scale = min((term_width - 10) / img.width, 1)
     new_w = max(24, int(img.width * scale))
     new_h = max(8, int(img.height * scale * 0.5))
     img = img.resize((new_w, new_h))
@@ -81,19 +88,11 @@ def generate_ascii_art(image_path=None, max_width=None):
             row += chars[idx]
         lines.append(row)
 
-    return lines
-
-
-def show_splash(delay=0.045):
-    console.clear()
-
-    lines = generate_ascii_art(max_width=max(24, shutil.get_terminal_size().columns - 10))
     console.print(Panel("", border_style="bright_green", padding=(0, 1)))
 
     for line in lines:
         console.print(Align.center(Text(line, style="green")))
         time.sleep(delay)
-
 
 def show_boot_sequence():
     with Progress(
