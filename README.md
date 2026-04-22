@@ -203,23 +203,6 @@ Printing becomes available once startup finishes.
 
 ---
 
-## Existing terminal version
-
-Your original keyboard-and-screen version still works.
-
-Run it with:
-
-```bash
-python main.py
-```
-
-So you can keep both modes in the same repo:
-
-- `main.py` = local terminal kiosk
-- `app.py` = phone/laptop web app
-
----
-
 ## Troubleshooting
 
 ### The receipt printer does not print the URL
@@ -263,15 +246,3 @@ Change the `PORT` constant in `app.py`.
 If you change the port, the printed receipt will automatically use the new port too.
 
 ---
-
-## Summary
-
-This version keeps your current Momir Vig logic, but changes the front end from:
-
-- local terminal + keyboard
-
-into:
-
-- Raspberry Pi background service + phone-friendly web app
-
-That gives you the same appliance feel, but controlled from your phone after the printer tells you where to connect.
