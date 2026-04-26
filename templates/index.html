@@ -24,18 +24,18 @@
     }
 
     [data-theme="dark"] {
-      --bg: #111827;
-      --surface: #182230;
-      --surface-2: #202b3a;
-      --line: #344054;
-      --line-strong: #475467;
-      --text: #f2f4f7;
-      --muted: #98a2b3;
-      --accent: #60a5fa;
-      --accent-2: #2dd4bf;
-      --danger: #f97066;
-      --success: #32d583;
-      --shadow: 0 10px 28px rgba(0, 0, 0, .28);
+      --bg: #020403;
+      --surface: #07120d;
+      --surface-2: #0b1a13;
+      --line: #183226;
+      --line-strong: #26513d;
+      --text: #eafff3;
+      --muted: #93b8a5;
+      --accent: #22c55e;
+      --accent-2: #16a34a;
+      --danger: #fb7185;
+      --success: #4ade80;
+      --shadow: 0 10px 28px rgba(0, 0, 0, .44);
     }
 
     * { box-sizing: border-box; }
@@ -153,7 +153,7 @@
     }
 
     button:hover:not(:disabled) { background: #eef4ff; border-color: #a9bde8; }
-    [data-theme="dark"] button:hover:not(:disabled) { background: #26364a; border-color: #667085; }
+    [data-theme="dark"] button:hover:not(:disabled) { background: #0f2419; border-color: #2f7d55; }
     button:disabled { opacity: .6; cursor: wait; }
 
     button.primary {
@@ -163,8 +163,8 @@
     }
 
     button.primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
-    [data-theme="dark"] button.primary { background: #2563eb; border-color: #2563eb; }
-    [data-theme="dark"] button.primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
+    [data-theme="dark"] button.primary { background: #16a34a; border-color: #16a34a; color: #031007; }
+    [data-theme="dark"] button.primary:hover:not(:disabled) { background: #22c55e; border-color: #22c55e; }
 
     button.secondary {
       background: var(--surface);
@@ -183,6 +183,10 @@
       outline: 2px solid rgba(37, 99, 235, .28);
       outline-offset: 2px;
       border-color: var(--accent);
+    }
+
+    [data-theme="dark"] input:focus {
+      outline-color: rgba(34, 197, 94, .35);
     }
 
     label {
@@ -244,7 +248,7 @@
     }
 
     [data-theme="dark"] .choice img {
-      background: #0b1220;
+      background: #020403;
     }
 
     .choice-body {
@@ -289,6 +293,42 @@
 
     .history-panel {
       grid-column: 1 / -1;
+    }
+
+    .history-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .history-toggle {
+      min-width: 96px;
+    }
+
+    .history-body {
+      display: grid;
+      gap: 10px;
+    }
+
+    .history-panel.collapsed .history-body {
+      display: none;
+    }
+
+    .history-item {
+      grid-template-columns: 1fr auto;
+      align-items: center;
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .history-actions button {
+      min-height: 36px;
+      padding: 8px 10px;
     }
 
     .modal-backdrop {
@@ -405,9 +445,15 @@
       <div id="cardStatus" class="status"></div>
     </section>
 
-    <section class="panel history-panel">
-      <h2>Print History</h2>
-      <div id="historyList" class="history"></div>
+    <section id="historyPanel" class="panel history-panel collapsed">
+      <div class="history-head">
+        <h2>Print History</h2>
+        <button id="historyToggle" class="secondary history-toggle" type="button">Show</button>
+      </div>
+      <div class="history-body">
+        <div id="historyStatus" class="status"></div>
+        <div id="historyList" class="history"></div>
+      </div>
     </section>
   </div>
 </main>
@@ -430,6 +476,9 @@ let modalCopies = 1;
 const cmcGrid = document.getElementById('cmcGrid');
 const installBtn = document.getElementById('installBtn');
 const themeToggle = document.getElementById('themeToggle');
+const historyPanel = document.getElementById('historyPanel');
+const historyToggle = document.getElementById('historyToggle');
+const historyStatus = document.getElementById('historyStatus');
 const historyList = document.getElementById('historyList');
 const choiceModal = document.getElementById('choiceModal');
 const modalTitle = document.getElementById('modalTitle');
@@ -497,11 +546,16 @@ function renderHistory(items = []) {
 
   historyList.innerHTML = items.map((item) => `
     <div class="history-item">
-      <div class="history-title">${escapeHtml(item.name)}</div>
-      <div class="meta">
-        ${escapeHtml(item.type_line || item.kind || 'Card')}
-        ${item.copies ? ` | Copies: ${escapeHtml(item.copies)}` : ''}
-        ${item.printed_at ? ` | ${escapeHtml(item.printed_at)}` : ''}
+      <div>
+        <div class="history-title">${escapeHtml(item.name)}</div>
+        <div class="meta">
+          ${escapeHtml(item.type_line || item.kind || 'Card')}
+          ${item.copies ? ` | Copies: ${escapeHtml(item.copies)}` : ''}
+          ${item.printed_at ? ` | ${escapeHtml(item.printed_at)}` : ''}
+        </div>
+      </div>
+      <div class="history-actions">
+        <button class="secondary history-reprint" data-history-id="${escapeHtml(item.history_id)}">Reprint</button>
       </div>
     </div>
   `).join('');
@@ -644,6 +698,26 @@ tokenQuery.addEventListener('keydown', (event) => {
 cardPrintBtn.addEventListener('click', handleCardPrint);
 cardQuery.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') handleCardPrint();
+});
+
+historyToggle.addEventListener('click', () => {
+  const collapsed = historyPanel.classList.toggle('collapsed');
+  historyToggle.textContent = collapsed ? 'Show' : 'Hide';
+});
+
+historyList.addEventListener('click', async (event) => {
+  const button = event.target.closest('.history-reprint');
+  if (!button) return;
+  setStatus(historyStatus, 'Reprinting...');
+  button.disabled = true;
+  try {
+    const data = await postJson('/api/reprint-history', {history_id: button.dataset.historyId});
+    renderHistory(data.history || []);
+    setStatus(historyStatus, `Reprinted ${data.item.name}.`, 'good');
+  } catch (error) {
+    setStatus(historyStatus, error.message, 'error');
+    button.disabled = false;
+  }
 });
 
 modalClose.addEventListener('click', closeChoiceModal);

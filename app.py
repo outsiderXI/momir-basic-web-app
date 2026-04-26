@@ -19,14 +19,11 @@ from search import (
     random_creature_by_cmc,
     search_card_candidates,
 )
-from tokens import (
-    dedupe_token_variants,
-    search_token_candidates_online,
-)
+from tokens import search_token_candidates_online
 
 APP_PORT = 5000
 APP_HOST = "0.0.0.0"
-MAX_HISTORY = 20
+MAX_HISTORY = 10
 STATUS_FILE = DATA_DIR / "web_status.json"
 
 app = Flask(__name__)
@@ -46,6 +43,7 @@ state: dict[str, Any] = {
     "last_preview": None,
     "last_print": None,
     "token_options": {},
+    "next_history_id": 1,
 }
 
 
@@ -186,7 +184,6 @@ def token_option_payload(token: dict[str, Any]):
 
 def build_token_matches(name: str, pt: str = "", colors: str = ""):
     matches = search_token_candidates_online(name)
-    matches = dedupe_token_variants(matches)
 
     output = []
     for token in matches[:18]:
@@ -200,6 +197,8 @@ def add_history(item: dict[str, Any]):
     history_item = dict(item)
     history_item["printed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
     with state_lock:
+        history_item["history_id"] = state["next_history_id"]
+        state["next_history_id"] += 1
         state["history"].appendleft(history_item)
         state["last_print"] = history_item
 
@@ -538,6 +537,30 @@ def api_print_again():
         return jsonify({"ok": False, "error": "Printer job failed."}), 500
 
     return jsonify({"ok": True, "printed": 1, "item": printed})
+
+
+@app.post("/api/reprint-history")
+def api_reprint_history():
+    data = request.get_json(silent=True) or {}
+    history_id = data.get("history_id")
+    try:
+        history_id = int(history_id)
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Missing history item."}), 400
+
+    with state_lock:
+        item = next((dict(entry) for entry in state["history"] if entry.get("history_id") == history_id), None)
+    if not item:
+        return jsonify({"ok": False, "error": "History item not found."}), 404
+
+    item["copies"] = 1
+    printed = print_preview_item(item, 1)
+    if not printed:
+        return jsonify({"ok": False, "error": "Printer job failed."}), 500
+
+    with state_lock:
+        history = list(state["history"])
+    return jsonify({"ok": True, "printed": 1, "item": printed, "history": history})
 
 
 @app.post("/api/history-preview")
