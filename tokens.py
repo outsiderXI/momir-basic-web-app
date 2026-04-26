@@ -14,16 +14,16 @@ def _card_image_url(card):
     return None
 
 
-def search_token_candidates_online(name, limit=18):
+def search_token_candidates_online(name, limit=250):
     name = name.strip()
     if not name:
         return []
 
-    exact_cards = _search_tokens(f'!"{name}" type:token game:paper', limit * 3)
+    exact_cards = _search_tokens(f'!"{name}" type:token game:paper', limit)
     if exact_cards:
         return _token_payloads(exact_cards, limit)
 
-    cards = _search_tokens(f"{name} type:token game:paper", limit * 3)
+    cards = _search_tokens(f"{name} type:token game:paper", limit)
     cards = _close_token_name_matches(cards, name)
     return _token_payloads(cards, limit)
 
@@ -54,7 +54,7 @@ def _search_tokens(query, limit):
 
 def _token_payloads(cards, limit):
     tokens = []
-    for card in cards[:limit * 3]:
+    for card in cards:
         image = _card_image_url(card)
         if not image:
             continue
