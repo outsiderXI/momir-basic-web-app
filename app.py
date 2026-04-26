@@ -208,10 +208,7 @@ def print_preview_item(preview: dict[str, Any], copies: int):
     successes = 0
     with print_lock:
         for _ in range(copies):
-            if preview.get("kind") == "card":
-                image_paths = get_card_print_image_paths(preview["id"])
-            else:
-                image_paths = [preview["id"]]
+            image_paths = get_card_print_image_paths(preview["id"])
 
             if not image_paths:
                 break
