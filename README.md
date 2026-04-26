@@ -11,15 +11,13 @@ A headless Raspberry Pi / Linux MTG thermal card printer that exposes a phone-fr
 - Serve a local web UI you can open from your phone, tablet, or laptop
 - Print random creatures by mana value, tokens, and normal cards from the browser
 
-## New web features
+## Web features
 
-- Card image preview before printing
-- Print again button
 - Recent print history
-- Token disambiguation cards instead of terminal prompts
+- Immediate Momir Basic printing from mana value buttons
+- Token disambiguation cards with color, power/toughness, and rules text
+- Similar-name options for normal card printing
 - PWA support so you can install it to your phone's home screen
-- Tap buttons for mana values 1-16
-- Live startup and activity logs in the browser
 
 ## Hardware requirements
 
@@ -28,10 +26,9 @@ A headless Raspberry Pi / Linux MTG thermal card printer that exposes a phone-fr
 - USB connection between Pi and printer
 - Internet connection for card and token lookups
 
-## Main entry points
+## Main Entry Point
 
-- `main.py` keeps the original terminal version intact
-- `app.py` runs the new headless web app
+- `app.py` runs the headless web app
 
 ## Install
 
@@ -64,12 +61,10 @@ Open that address from your phone or laptop while connected to the same network.
 
 You can:
 
-- tap mana values `1` through `16` for Momir mode
+- tap mana values `1` through `16` to immediately print a random creature
 - search token names like `rat` or `treasure`
-- search normal cards like `Sol Ring`
-- preview the image before printing
-- choose the correct token when multiple variants exist
-- reprint from recent history
+- choose the correct token when multiple variants exist, then choose copies
+- search normal cards like `Sol Ring`, choose the closest match, then choose copies
 - use the install prompt to add the app to your phone's home screen
 
 ## Startup behavior
@@ -79,9 +74,9 @@ Startup is intentionally lightweight so it can run comfortably as a headless Ras
 1. Check internet availability
 2. Print the local web URL when the Pi has a network address
 3. Use live Scryfall lookups for Momir, token, and card searches
-4. Cache only the individual images that are previewed or printed
+4. Cache only the individual images that are printed
 
-The web UI shows the live startup log while this is happening.
+The web UI stays focused on the three print workflows and recent print history.
 
 ## Set it to launch automatically on boot
 
@@ -128,17 +123,12 @@ journalctl -u momir-vig-web.service -f
 ## Project structure
 
 - `app.py` - Flask web server and API
+- `config.py` - app, printer, and image sizing settings
 - `templates/index.html` - web UI
 - `static/manifest.json` - PWA manifest
 - `static/service-worker.js` - offline shell caching
 - `deploy/momir-vig-web.service` - systemd startup service
 - `printer.py` - image printing and receipt text printing
 - `downloader.py` - internet readiness and on-demand image caching
-
-## Original terminal mode still works
-
-If you still want the original direct-on-Pi version:
-
-```bash
-python main.py
-```
+- `search.py` - live Scryfall card lookups
+- `tokens.py` - live Scryfall token lookups and token deduping

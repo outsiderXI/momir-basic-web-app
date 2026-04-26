@@ -13,21 +13,14 @@ from config import DATA_DIR, IMAGE_DIR
 from downloader import download_card_image, ensure_card_image, initialize_database
 from printer import print_image, print_text_receipt
 from search import (
-    cache_stats,
     exact_card_row_by_name,
     get_card_details,
-    human_size,
     random_creature_by_cmc,
     search_card_candidates,
 )
-from splash import MOMIR_QUOTES
 from tokens import (
     dedupe_token_variants,
-    filter_color,
-    filter_pt,
-    load_tokens,
     search_token_candidates_online,
-    smart_match,
 )
 
 APP_PORT = 5000
@@ -164,6 +157,11 @@ def build_card_preview(card_id: str):
     }
 
 
+def color_text(colors: list[str] | tuple[str, ...] | None) -> str:
+    ordered = "WUBRG"
+    return "".join(color for color in ordered if color in set(colors or [])) or "Colorless"
+
+
 def token_option_payload(token: dict[str, Any]):
     image_name = Path(token.get("local_image") or f"{token['id']}.jpg").name
     return {
@@ -171,10 +169,12 @@ def token_option_payload(token: dict[str, Any]):
         "id": token["id"],
         "name": token["name"],
         "type_line": "Token",
-        "pt": f"{token.get('power') or '?'} / {token.get('toughness') or '?'}",
+        "pt": f"{token.get('power') or '?'}/{token.get('toughness') or '?'}",
         "colors": token.get("colors", []),
+        "color_text": color_text(token.get("colors", [])),
         "oracle_text": token.get("oracle_text") or "",
         "image_url": f"/images/{image_name}",
+        "source_image": token.get("image"),
         "set_codes": token.get("_set_codes", []),
         "variant_count": token.get("_variant_count", 1),
         "copies": 1,
@@ -182,32 +182,12 @@ def token_option_payload(token: dict[str, Any]):
 
 
 def build_token_matches(name: str, pt: str = "", colors: str = ""):
-    tokens = load_tokens()
-    matches = smart_match(tokens, name) if tokens else search_token_candidates_online(name)
-    if pt:
-        filtered = filter_pt(matches, pt)
-        if filtered:
-            matches = filtered
-    if colors:
-        filtered = filter_color(matches, colors.strip().lower())
-        if filtered:
-            matches = filtered
+    matches = search_token_candidates_online(name)
     matches = dedupe_token_variants(matches)
 
     output = []
     for token in matches[:18]:
-        local = token.get("local_image")
-        if not local:
-            local = ensure_card_image(token["id"])
-            if not local and token.get("image"):
-                try:
-                    local = download_card_image(token["id"], token["image"])
-                except Exception:
-                    local = None
-            if local:
-                token["local_image"] = str(local)
-        if token.get("local_image"):
-            output.append(token_option_payload(token))
+        output.append(token_option_payload(token))
     with state_lock:
         state["token_options"] = {item["id"]: item for item in output}
     return output
@@ -219,6 +199,25 @@ def add_history(item: dict[str, Any]):
     with state_lock:
         state["history"].appendleft(history_item)
         state["last_print"] = history_item
+
+
+def print_preview_item(preview: dict[str, Any], copies: int):
+    successes = 0
+    with print_lock:
+        for _ in range(copies):
+            if print_image(preview["id"]):
+                successes += 1
+            else:
+                break
+
+    if successes == 0:
+        return None
+
+    history_payload = dict(preview)
+    history_payload["copies"] = successes
+    add_history(history_payload)
+    append_log(f"Printed {preview['name']} x{successes}")
+    return history_payload
 
 
 def wait_for_network_and_print_url():
@@ -262,7 +261,6 @@ def images(filename: str):
 
 @app.get("/api/status")
 def api_status():
-    stats = cache_stats()
     with state_lock:
         payload = {
             "ready": state["ready"],
@@ -272,11 +270,6 @@ def api_status():
             "last_preview": state["last_preview"],
             "last_print": state["last_print"],
             "last_ip_printed": state["last_ip_printed"],
-            "quote": MOMIR_QUOTES[int(time.time()) % len(MOMIR_QUOTES)],
-            "cache": {
-                **stats,
-                "image_size_human": human_size(stats["image_size_bytes"]),
-            },
         }
     return jsonify(payload)
 
@@ -345,6 +338,73 @@ def api_token_options():
     return jsonify({"ok": True, "options": options})
 
 
+@app.post("/api/card-options")
+def api_card_options():
+    data = request.get_json(silent=True) or {}
+    query = str(data.get("query", "")).strip()
+    if not query:
+        return jsonify({"ok": False, "error": "Enter a card name."}), 400
+
+    options = []
+    exact = exact_card_row_by_name(query)
+    if exact:
+        card_id, name, cmc, type_line = exact
+        options.append(
+            {
+                "id": card_id,
+                "name": name,
+                "cmc": cmc,
+                "type_line": type_line,
+                "exact": True,
+            }
+        )
+
+    seen = {option["id"] for option in options}
+    for candidate in search_card_candidates(query, limit=10):
+        if candidate["id"] in seen:
+            continue
+        options.append(
+            {
+                "id": candidate["id"],
+                "name": candidate["name"],
+                "cmc": candidate["cmc"],
+                "type_line": candidate["type_line"],
+                "exact": False,
+            }
+        )
+        seen.add(candidate["id"])
+
+    if not options:
+        return jsonify({"ok": False, "error": f"No cards found for '{query}'."}), 404
+
+    return jsonify({"ok": True, "options": options})
+
+
+@app.post("/api/momir-print")
+def api_momir_print():
+    data = request.get_json(silent=True) or {}
+    cmc = int(data.get("cmc", 0) or 0)
+    if not 1 <= cmc <= 16:
+        return jsonify({"ok": False, "error": "Choose a mana value from 1 to 16."}), 400
+
+    card_id = random_creature_by_cmc(cmc)
+    if not card_id:
+        return jsonify({"ok": False, "error": f"No creature found for mana value {cmc}."}), 404
+
+    preview = build_card_preview(card_id)
+    if not preview:
+        return jsonify({"ok": False, "error": "Unable to download the creature image."}), 500
+    preview["source"] = f"Random creature with mana value {cmc}"
+
+    printed = print_preview_item(preview, 1)
+    if not printed:
+        return jsonify({"ok": False, "error": "Printer job failed."}), 500
+
+    with state_lock:
+        history = list(state["history"])
+    return jsonify({"ok": True, "printed": 1, "item": printed, "history": history})
+
+
 @app.post("/api/select-token")
 def api_select_token():
     data = request.get_json(silent=True) or {}
@@ -353,32 +413,81 @@ def api_select_token():
     if not token_id:
         return jsonify({"ok": False, "error": "Missing token id."}), 400
 
-    tokens = load_tokens()
-    token = next((t for t in tokens if t.get("id") == token_id), None)
-    if not token:
-        with state_lock:
-            cached_option = state["token_options"].get(token_id)
-        if cached_option:
-            preview = dict(cached_option)
-            preview["copies"] = copies
-            with state_lock:
-                state["last_preview"] = preview
-            return jsonify({"ok": True, "preview": preview})
-    if not token:
+    with state_lock:
+        cached_option = state["token_options"].get(token_id)
+    if not cached_option:
         return jsonify({"ok": False, "error": "Token not found."}), 404
 
-    local = token.get("local_image")
-    if not local:
-        local = ensure_card_image(token_id)
+    preview = dict(cached_option)
+    local = ensure_card_image(token_id)
+    if not local and preview.get("source_image"):
+        try:
+            local = download_card_image(token_id, preview["source_image"])
+        except Exception:
+            local = None
     if not local:
         return jsonify({"ok": False, "error": "Token image could not be downloaded."}), 404
-    token["local_image"] = str(local)
-
-    preview = token_option_payload(token)
+    preview["image_url"] = f"/images/{Path(local).name}"
     preview["copies"] = copies
     with state_lock:
         state["last_preview"] = preview
     return jsonify({"ok": True, "preview": preview})
+
+
+@app.post("/api/print-token")
+def api_print_token():
+    data = request.get_json(silent=True) or {}
+    token_id = str(data.get("token_id", "")).strip()
+    copies = max(1, min(20, int(data.get("copies", 1) or 1)))
+    if not token_id:
+        return jsonify({"ok": False, "error": "Missing token id."}), 400
+
+    with state_lock:
+        cached_option = state["token_options"].get(token_id)
+    if cached_option:
+        preview = dict(cached_option)
+        local = ensure_card_image(token_id)
+        if not local and preview.get("source_image"):
+            try:
+                local = download_card_image(token_id, preview["source_image"])
+            except Exception:
+                local = None
+        if not local:
+            return jsonify({"ok": False, "error": "Token image could not be downloaded."}), 404
+        preview["image_url"] = f"/images/{Path(local).name}"
+    else:
+        return jsonify({"ok": False, "error": "Token not found. Search and choose a token first."}), 404
+
+    preview["copies"] = copies
+    printed = print_preview_item(preview, copies)
+    if not printed:
+        return jsonify({"ok": False, "error": "Printer job failed."}), 500
+
+    with state_lock:
+        history = list(state["history"])
+    return jsonify({"ok": True, "printed": printed["copies"], "item": printed, "history": history})
+
+
+@app.post("/api/print-card")
+def api_print_card():
+    data = request.get_json(silent=True) or {}
+    card_id = str(data.get("card_id", "")).strip()
+    copies = max(1, min(20, int(data.get("copies", 1) or 1)))
+    if not card_id:
+        return jsonify({"ok": False, "error": "Missing card id."}), 400
+
+    preview = build_card_preview(card_id)
+    if not preview:
+        return jsonify({"ok": False, "error": "Card image could not be downloaded."}), 404
+    preview["copies"] = copies
+
+    printed = print_preview_item(preview, copies)
+    if not printed:
+        return jsonify({"ok": False, "error": "Printer job failed."}), 500
+
+    with state_lock:
+        history = list(state["history"])
+    return jsonify({"ok": True, "printed": printed["copies"], "item": printed, "history": history})
 
 
 @app.post("/api/print")
@@ -392,22 +501,11 @@ def api_print():
         return jsonify({"ok": False, "error": "Nothing selected to print."}), 400
 
     copies = max(1, min(20, int(data.get("copies", preview.get("copies", 1)) or 1)))
-    successes = 0
-    with print_lock:
-        for _ in range(copies):
-            if print_image(preview["id"]):
-                successes += 1
-            else:
-                break
-
-    if successes == 0:
+    printed = print_preview_item(preview, copies)
+    if not printed:
         return jsonify({"ok": False, "error": "Printer job failed."}), 500
 
-    history_payload = dict(preview)
-    history_payload["copies"] = successes
-    add_history(history_payload)
-    append_log(f"Printed {preview['name']} x{successes}")
-    return jsonify({"ok": True, "printed": successes, "item": history_payload})
+    return jsonify({"ok": True, "printed": printed["copies"], "item": printed})
 
 
 @app.post("/api/print-again")
@@ -441,11 +539,11 @@ def api_history_preview():
         return jsonify({"ok": False, "error": "Missing history item id."}), 400
 
     if item_kind == "token":
-        tokens = load_tokens()
-        token = next((t for t in tokens if t.get("id") == item_id), None)
+        with state_lock:
+            token = state["token_options"].get(item_id)
         if not token:
             return jsonify({"ok": False, "error": "Token not found."}), 404
-        preview = token_option_payload(token)
+        preview = dict(token)
         with state_lock:
             state["last_preview"] = preview
         return jsonify({"ok": True, "preview": preview})

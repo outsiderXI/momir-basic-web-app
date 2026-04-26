@@ -1,12 +1,8 @@
 from pathlib import Path
+import logging
 import time
 
-from rich.console import Console
-from rich.panel import Panel
-
 from config import IMAGE_DIR, PRINTER_PRODUCT_ID, PRINTER_VENDOR_ID
-
-console = Console()
 
 PRINTER_PROFILE = "TM-T88V"
 POST_PRINT_FEED_LINES = 2
@@ -40,13 +36,7 @@ def print_image(card_id_or_path, retries=3, retry_delay=1.0):
     path = _resolve_image_path(card_id_or_path)
 
     if not path:
-        console.print(
-            Panel(
-                f"[bold red]Image not found:[/bold red] {card_id_or_path}",
-                title="Print Error",
-                border_style="red",
-            )
-        )
+        logging.error("Image not found: %s", card_id_or_path)
         return False
 
     last_error = None
@@ -55,13 +45,7 @@ def print_image(card_id_or_path, retries=3, retry_delay=1.0):
         printer = None
         try:
             if attempt > 1:
-                console.print(
-                    Panel(
-                        f"[yellow]Printer recovery attempt {attempt}/{retries}...[/yellow]",
-                        title="Printer Recovery",
-                        border_style="yellow",
-                    )
-                )
+                logging.warning("Printer recovery attempt %s/%s...", attempt, retries)
 
             printer = _open_printer()
 
@@ -86,23 +70,15 @@ def print_image(card_id_or_path, retries=3, retry_delay=1.0):
                 pass
 
             if attempt > 1:
-                console.print("[bold green]Printer recovered successfully.[/bold green]")
+                logging.info("Printer recovered successfully.")
 
             return True
 
         except Exception as e:
             last_error = e
-
-            console.print(
-                Panel(
-                    f"[red]Printer error:[/red] {e}",
-                    title=f"Print Attempt {attempt}/{retries}",
-                    border_style="red",
-                )
-            )
+            logging.warning("Printer error on attempt %s/%s: %s", attempt, retries, e)
 
             if attempt < retries:
-                console.print("[yellow]Retrying printer connection...[/yellow]")
                 time.sleep(retry_delay)
 
         finally:
@@ -112,13 +88,7 @@ def print_image(card_id_or_path, retries=3, retry_delay=1.0):
                 except Exception:
                     pass
 
-    console.print(
-        Panel(
-            f"[bold red]Printing failed after {retries} attempts.[/bold red]\n{last_error}",
-            title="Printer Offline",
-            border_style="bold red",
-        )
-    )
+    logging.error("Printing failed after %s attempts: %s", retries, last_error)
     return False
 
 
@@ -154,11 +124,5 @@ def print_text_receipt(lines, retries=3, retry_delay=1.0):
                 except Exception:
                     pass
 
-    console.print(
-        Panel(
-            f"[bold red]Receipt text printing failed.[/bold red]\n{last_error}",
-            title="Printer Offline",
-            border_style="bold red",
-        )
-    )
+    logging.error("Receipt text printing failed: %s", last_error)
     return False

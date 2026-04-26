@@ -1,11 +1,11 @@
 {
-  "name": "Momir Vig Printer",
+  "name": "Momir Basic Printer",
   "short_name": "Momir",
-  "description": "Phone-friendly local controller for the Momir Vig Raspberry Pi printer.",
+  "description": "Phone-friendly local controller for the Momir Basic Raspberry Pi printer.",
   "display": "standalone",
   "start_url": "/",
-  "background_color": "#08110d",
-  "theme_color": "#08110d",
+  "background_color": "#17110b",
+  "theme_color": "#17110b",
   "icons": [
     {
       "src": "/static/icon-192.png",

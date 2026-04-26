@@ -1,4 +1,4 @@
-const CACHE = 'momir-vig-web-v1';
+const CACHE = 'momir-basic-web-v2';
 const ASSETS = ['/', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
