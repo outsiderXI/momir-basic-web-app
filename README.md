@@ -95,8 +95,8 @@ sudo nano /etc/systemd/system/momir-vig-web.service
 Make sure these values match your system:
 
 - `User=pi`
-- `WorkingDirectory=/home/pi/Momir-Vig-Printer`
-- `ExecStart=/home/pi/Momir-Vig-Printer/venv/bin/python /home/pi/Momir-Vig-Printer/app.py`
+- `WorkingDirectory=/home/pi/momir-basic-web-app`
+- `ExecStart=/home/pi/momir-basic-web-app/venv/bin/python momir-basic-web-app/app.py`
 
 Then enable it:
 
