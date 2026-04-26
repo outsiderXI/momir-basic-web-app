@@ -19,7 +19,7 @@ from search import (
     random_creature_by_cmc,
     search_card_candidates,
 )
-from tokens import search_token_candidates_online
+from tokens import dedupe_token_variants, search_token_candidates_online
 
 APP_PORT = 5000
 APP_HOST = "0.0.0.0"
@@ -184,6 +184,7 @@ def token_option_payload(token: dict[str, Any]):
 
 def build_token_matches(name: str, pt: str = "", colors: str = ""):
     matches = search_token_candidates_online(name)
+    matches = dedupe_token_variants(matches)
 
     output = []
     for token in matches[:18]:

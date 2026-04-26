@@ -29,22 +29,27 @@ def search_token_candidates_online(name, limit=18):
 
 
 def _search_tokens(query, limit):
+    cards = []
+    url = f"{SCRYFALL}/cards/search"
+    params = {
+        "q": query,
+        "include_extras": "true",
+        "unique": "prints",
+        "order": "name",
+    }
+
     try:
-        response = requests.get(
-            f"{SCRYFALL}/cards/search",
-            params={
-                "q": query,
-                "include_extras": "true",
-                "unique": "prints",
-                "order": "name",
-            },
-            timeout=20,
-        )
-        response.raise_for_status()
+        while url and len(cards) < limit:
+            response = requests.get(url, params=params, timeout=20)
+            response.raise_for_status()
+            data = response.json()
+            cards.extend(data.get("data", []))
+            url = data.get("next_page") if data.get("has_more") else None
+            params = None
     except Exception:
         return []
 
-    return response.json().get("data", [])[:limit]
+    return cards[:limit]
 
 
 def _token_payloads(cards, limit):
@@ -60,6 +65,7 @@ def _token_payloads(cards, limit):
                 "power": card.get("power"),
                 "toughness": card.get("toughness"),
                 "colors": card.get("colors", []),
+                "color_identity": card.get("color_identity", card.get("colors", [])),
                 "oracle_text": card.get("oracle_text", ""),
                 "image": image,
                 "set_name": card.get("set_name", ""),
@@ -99,7 +105,7 @@ def token_signature(token):
         token.get("name", "").strip().lower(),
         token.get("power"),
         token.get("toughness"),
-        tuple(token.get("colors", [])),
+        tuple(sorted(token.get("color_identity") or token.get("colors", []))),
         (token.get("oracle_text") or "").strip().lower(),
     )
 

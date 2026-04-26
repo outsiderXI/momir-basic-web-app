@@ -548,17 +548,23 @@ function renderHistory(items = []) {
     <div class="history-item">
       <div>
         <div class="history-title">${escapeHtml(item.name)}</div>
-        <div class="meta">
-          ${escapeHtml(item.type_line || item.kind || 'Card')}
-          ${item.copies ? ` | Copies: ${escapeHtml(item.copies)}` : ''}
-          ${item.printed_at ? ` | ${escapeHtml(item.printed_at)}` : ''}
-        </div>
+        <div class="meta">${historyMeta(item)}</div>
       </div>
       <div class="history-actions">
         <button class="secondary history-reprint" data-history-id="${escapeHtml(item.history_id)}">Reprint</button>
       </div>
     </div>
   `).join('');
+}
+
+function historyMeta(item) {
+  const parts = [
+    item.type_line || item.kind || 'Card',
+    item.copies ? `Copies: ${item.copies}` : '',
+    item.color_text || ((item.colors || []).length ? `Color: ${(item.colors || []).join('')}` : ''),
+    item.pt ? `P/T: ${item.pt}` : ''
+  ].filter(Boolean);
+  return parts.map(escapeHtml).join(' | ');
 }
 
 async function refreshHistory() {

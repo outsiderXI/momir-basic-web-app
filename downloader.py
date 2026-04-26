@@ -5,7 +5,7 @@ import requests
 from PIL import Image, ImageEnhance, ImageFilter
 from requests.adapters import HTTPAdapter
 
-from config import IMAGE_DIR, PRINTER_MAX_WIDTH
+from config import IMAGE_DIR, PRINTER_MAX_WIDTH, PRINT_SCALE
 
 SCRYFALL = "https://api.scryfall.com"
 
@@ -68,7 +68,7 @@ def _process_and_save_image_bytes(content, path):
 
     img = Image.open(BytesIO(content)).convert("L")
 
-    scale = PRINTER_MAX_WIDTH / img.width
+    scale = (PRINTER_MAX_WIDTH * PRINT_SCALE) / img.width
     w = max(1, int(img.width * scale * 1.19))
     h = max(1, int(img.height * scale * 1.19))
 
