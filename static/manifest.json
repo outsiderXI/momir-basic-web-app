@@ -4,8 +4,8 @@
   "description": "Phone-friendly local controller for the Momir Basic Raspberry Pi printer.",
   "display": "standalone",
   "start_url": "/",
-  "background_color": "#17110b",
-  "theme_color": "#17110b",
+  "background_color": "#f6f7f9",
+  "theme_color": "#f6f7f9",
   "icons": [
     {
       "src": "/static/icon-192.png",

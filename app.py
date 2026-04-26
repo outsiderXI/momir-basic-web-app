@@ -10,9 +10,10 @@ from typing import Any
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from config import DATA_DIR, IMAGE_DIR
-from downloader import download_card_image, ensure_card_image, initialize_database
+from downloader import download_card_image, ensure_card_image, get_card_print_image_paths, initialize_database
 from printer import print_image, print_text_receipt
 from search import (
+    exact_card_candidate_by_name,
     exact_card_row_by_name,
     get_card_details,
     random_creature_by_cmc,
@@ -164,6 +165,7 @@ def color_text(colors: list[str] | tuple[str, ...] | None) -> str:
 
 def token_option_payload(token: dict[str, Any]):
     image_name = Path(token.get("local_image") or f"{token['id']}.jpg").name
+    source_image = token.get("image")
     return {
         "kind": "token",
         "id": token["id"],
@@ -174,7 +176,8 @@ def token_option_payload(token: dict[str, Any]):
         "color_text": color_text(token.get("colors", [])),
         "oracle_text": token.get("oracle_text") or "",
         "image_url": f"/images/{image_name}",
-        "source_image": token.get("image"),
+        "display_image_url": source_image or f"/images/{image_name}",
+        "source_image": source_image,
         "set_codes": token.get("_set_codes", []),
         "variant_count": token.get("_variant_count", 1),
         "copies": 1,
@@ -205,10 +208,24 @@ def print_preview_item(preview: dict[str, Any], copies: int):
     successes = 0
     with print_lock:
         for _ in range(copies):
-            if print_image(preview["id"]):
-                successes += 1
+            if preview.get("kind") == "card":
+                image_paths = get_card_print_image_paths(preview["id"])
             else:
+                image_paths = [preview["id"]]
+
+            if not image_paths:
                 break
+
+            printed_all_faces = True
+            for image_path in image_paths:
+                if not print_image(image_path):
+                    printed_all_faces = False
+                    break
+
+            if not printed_all_faces:
+                break
+
+            successes += 1
 
     if successes == 0:
         return None
@@ -346,15 +363,15 @@ def api_card_options():
         return jsonify({"ok": False, "error": "Enter a card name."}), 400
 
     options = []
-    exact = exact_card_row_by_name(query)
+    exact = exact_card_candidate_by_name(query)
     if exact:
-        card_id, name, cmc, type_line = exact
         options.append(
             {
-                "id": card_id,
-                "name": name,
-                "cmc": cmc,
-                "type_line": type_line,
+                "id": exact["id"],
+                "name": exact["name"],
+                "cmc": exact["cmc"],
+                "type_line": exact["type_line"],
+                "display_image_url": exact.get("image_url"),
                 "exact": True,
             }
         )
@@ -369,6 +386,7 @@ def api_card_options():
                 "name": candidate["name"],
                 "cmc": candidate["cmc"],
                 "type_line": candidate["type_line"],
+                "display_image_url": candidate.get("image_url"),
                 "exact": False,
             }
         )
@@ -515,19 +533,11 @@ def api_print_again():
     if not last_print:
         return jsonify({"ok": False, "error": "Nothing has been printed yet."}), 400
 
-    successes = 0
-    with print_lock:
-        if print_image(last_print["id"]):
-            successes = 1
-
-    if successes == 0:
+    printed = print_preview_item(last_print, 1)
+    if not printed:
         return jsonify({"ok": False, "error": "Printer job failed."}), 500
 
-    history_payload = dict(last_print)
-    history_payload["copies"] = 1
-    add_history(history_payload)
-    append_log(f"Printed again: {last_print['name']}")
-    return jsonify({"ok": True, "printed": 1, "item": history_payload})
+    return jsonify({"ok": True, "printed": 1, "item": printed})
 
 
 @app.post("/api/history-preview")

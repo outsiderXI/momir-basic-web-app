@@ -34,6 +34,7 @@ def _candidate(card):
         "name": name,
         "cmc": cmc,
         "type_line": type_line,
+        "image_url": _card_image_url(card),
     }
 
 
@@ -66,6 +67,22 @@ def exact_card_row_by_name(name):
         cards = data.get("data", [])
         if cards:
             return _card_row(cards[0])
+    except Exception:
+        return None
+    return None
+
+
+def exact_card_candidate_by_name(name):
+    try:
+        data = _scryfall_get(
+            "/cards/search",
+            q=f'!"{name}" -type:token game:paper -is:digital',
+            unique="cards",
+            order="released",
+        )
+        cards = data.get("data", [])
+        if cards:
+            return _candidate(cards[0])
     except Exception:
         return None
     return None

@@ -51,6 +51,18 @@ def _card_image_url(card):
     return None
 
 
+def _card_face_image_urls(card):
+    urls = []
+    for face in card.get("card_faces", []):
+        image_uris = face.get("image_uris")
+        if not image_uris:
+            continue
+        url = image_uris.get("large") or image_uris.get("normal")
+        if url:
+            urls.append(url)
+    return urls
+
+
 def _process_and_save_image_bytes(content, path):
     tmp = path.with_name(path.stem + ".tmp.jpg")
 
@@ -69,8 +81,9 @@ def _process_and_save_image_bytes(content, path):
     tmp.replace(path)
 
 
-def download_card_image(card_id, url):
-    path = IMAGE_DIR / f"{card_id}.jpg"
+def download_card_image(card_id, url, suffix=None):
+    filename = f"{card_id}-{suffix}.jpg" if suffix is not None else f"{card_id}.jpg"
+    path = IMAGE_DIR / filename
     if path.exists():
         return str(path)
 
@@ -78,6 +91,48 @@ def download_card_image(card_id, url):
     response.raise_for_status()
     _process_and_save_image_bytes(response.content, path)
     return str(path)
+
+
+def get_card_print_image_paths(card_id):
+    if not has_internet():
+        face_paths = sorted(IMAGE_DIR.glob(f"{card_id}-*.jpg"))
+        if len(face_paths) >= 2:
+            return [str(path) for path in face_paths]
+        path = IMAGE_DIR / f"{card_id}.jpg"
+        return [str(path)] if path.exists() else []
+
+    try:
+        response = session.get(f"{SCRYFALL}/cards/{card_id}", timeout=20)
+        response.raise_for_status()
+        card = response.json()
+    except Exception as e:
+        logging.warning("Card lookup failed for %s: %s", card_id, e)
+        face_paths = sorted(IMAGE_DIR.glob(f"{card_id}-*.jpg"))
+        if len(face_paths) >= 2:
+            return [str(path) for path in face_paths]
+        path = IMAGE_DIR / f"{card_id}.jpg"
+        return [str(path)] if path.exists() else []
+
+    face_urls = _card_face_image_urls(card)
+    if len(face_urls) >= 2:
+        paths = []
+        for index, url in enumerate(face_urls, start=1):
+            try:
+                paths.append(download_card_image(card_id, url, suffix=index))
+            except Exception as e:
+                logging.warning("Card face image download failed for %s face %s: %s", card_id, index, e)
+                return []
+        return paths
+
+    image_url = _card_image_url(card)
+    if not image_url:
+        return []
+
+    try:
+        return [download_card_image(card_id, image_url)]
+    except Exception as e:
+        logging.warning("Card image download failed for %s: %s", card_id, e)
+        return []
 
 
 def ensure_card_image(card_id):

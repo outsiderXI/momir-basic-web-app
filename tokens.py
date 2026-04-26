@@ -1,3 +1,5 @@
+from difflib import SequenceMatcher
+
 import requests
 
 SCRYFALL = "https://api.scryfall.com"
@@ -13,11 +15,25 @@ def _card_image_url(card):
 
 
 def search_token_candidates_online(name, limit=18):
+    name = name.strip()
+    if not name:
+        return []
+
+    exact_cards = _search_tokens(f'!"{name}" type:token game:paper', limit * 3)
+    if exact_cards:
+        return _token_payloads(exact_cards, limit)
+
+    cards = _search_tokens(f"{name} type:token game:paper", limit * 3)
+    cards = _close_token_name_matches(cards, name)
+    return _token_payloads(cards, limit)
+
+
+def _search_tokens(query, limit):
     try:
         response = requests.get(
             f"{SCRYFALL}/cards/search",
             params={
-                "q": f"{name} type:token game:paper",
+                "q": query,
                 "include_extras": "true",
                 "unique": "prints",
                 "order": "name",
@@ -28,8 +44,12 @@ def search_token_candidates_online(name, limit=18):
     except Exception:
         return []
 
+    return response.json().get("data", [])[:limit]
+
+
+def _token_payloads(cards, limit):
     tokens = []
-    for card in response.json().get("data", [])[:limit * 3]:
+    for card in cards[:limit * 3]:
         image = _card_image_url(card)
         if not image:
             continue
@@ -49,6 +69,29 @@ def search_token_candidates_online(name, limit=18):
         if len(tokens) >= limit:
             break
     return tokens
+
+
+def _close_token_name_matches(cards, query):
+    names = {}
+    query_key = query.casefold()
+    for card in cards:
+        token_name = card.get("name", "")
+        if not token_name:
+            continue
+        name_key = token_name.casefold()
+        score = SequenceMatcher(None, query_key, name_key).ratio()
+        word_match = query_key in {part.casefold() for part in token_name.replace("//", " ").split()}
+        if score >= 0.72 or word_match:
+            names[name_key] = max(names.get(name_key, 0), score + (0.15 if word_match else 0))
+
+    if not names:
+        return []
+
+    best_names = {
+        name
+        for name, _ in sorted(names.items(), key=lambda item: item[1], reverse=True)[:6]
+    }
+    return [card for card in cards if card.get("name", "").casefold() in best_names]
 
 
 def token_signature(token):

@@ -4,29 +4,38 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Momir Basic Printer</title>
-  <meta name="theme-color" content="#17110b">
+  <meta name="theme-color" content="#f6f7f9">
   <link rel="manifest" href="/manifest.json">
   <style>
     :root {
-      --bg: #17110b;
-      --felt: #243025;
-      --card: #221913;
-      --card2: #3a2a1f;
-      --inset: #e1cfaa;
-      --paper: #efe0bd;
-      --ink: #24190f;
-      --line: #92764d;
-      --text: #f5ead2;
-      --muted: #d8c59f;
-      --gold: #c9a35d;
-      --blue: #5d8fbd;
-      --green: #4e8d59;
-      --red: #a9503a;
-      --black: #1f1a17;
-      --white: #eadfbf;
-      --danger: #ff9a8c;
-      --shadow: 0 18px 34px rgba(0, 0, 0, .38);
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-2: #f9fafb;
+      --line: #d9dee7;
+      --line-strong: #c7ceda;
+      --text: #18202b;
+      --muted: #667085;
+      --accent: #2563eb;
+      --accent-2: #0f766e;
+      --danger: #b42318;
+      --success: #087443;
+      --shadow: 0 10px 24px rgba(15, 23, 42, .08);
       --sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #111827;
+      --surface: #182230;
+      --surface-2: #202b3a;
+      --line: #344054;
+      --line-strong: #475467;
+      --text: #f2f4f7;
+      --muted: #98a2b3;
+      --accent: #60a5fa;
+      --accent-2: #2dd4bf;
+      --danger: #f97066;
+      --success: #32d583;
+      --shadow: 0 10px 28px rgba(0, 0, 0, .28);
     }
 
     * { box-sizing: border-box; }
@@ -36,29 +45,15 @@
       min-height: 100vh;
       font-family: var(--sans);
       color: var(--text);
-      background:
-        linear-gradient(90deg, rgba(255, 255, 255, .025) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(255, 255, 255, .018) 1px, transparent 1px),
-        radial-gradient(circle at 18% 8%, rgba(201, 163, 93, .22), transparent 30%),
-        radial-gradient(circle at 80% 0%, rgba(77, 122, 172, .16), transparent 32%),
-        linear-gradient(145deg, #302417, var(--felt) 44%, var(--bg));
-      background-size: 28px 28px, 28px 28px, auto, auto, auto;
+      background: var(--bg);
     }
 
     .wrap {
       width: min(1180px, 100%);
       margin: 0 auto;
-      padding: 18px;
+      padding: 24px;
       display: grid;
-      gap: 16px;
-    }
-
-    .wrap::before {
-      content: "";
-      height: 5px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, var(--white), var(--blue), var(--black), var(--red), var(--green));
-      box-shadow: 0 0 22px rgba(201, 163, 93, .4);
+      gap: 18px;
     }
 
     .grid {
@@ -69,75 +64,29 @@
     }
 
     .panel {
-      position: relative;
-      overflow: hidden;
-      background:
-        linear-gradient(180deg, rgba(255, 246, 220, .08), transparent 35%),
-        linear-gradient(145deg, var(--card2), var(--card));
-      border: 2px solid #0d0906;
+      background: var(--surface);
+      border: 1px solid var(--line);
       border-radius: 8px;
-      box-shadow: var(--shadow), inset 0 0 0 2px rgba(201, 163, 93, .55), inset 0 0 0 6px rgba(0, 0, 0, .42);
+      box-shadow: var(--shadow);
       padding: 18px;
       display: grid;
       gap: 12px;
     }
 
-    .panel.momir {
-      box-shadow: var(--shadow), inset 0 0 0 2px rgba(78, 141, 89, .8), inset 0 0 0 6px rgba(0, 0, 0, .42);
-    }
-
-    .panel.token {
-      box-shadow: var(--shadow), inset 0 0 0 2px rgba(31, 26, 23, .9), inset 0 0 0 6px rgba(0, 0, 0, .42);
-    }
-
-    .panel.card-search {
-      box-shadow: var(--shadow), inset 0 0 0 2px rgba(93, 143, 189, .74), inset 0 0 0 6px rgba(0, 0, 0, .42);
-    }
-
-    .panel.history-panel {
-      box-shadow: var(--shadow), inset 0 0 0 2px rgba(201, 163, 93, .78), inset 0 0 0 6px rgba(0, 0, 0, .42);
-    }
-
-    .panel::before {
-      content: "";
-      position: absolute;
-      inset: 8px;
-      pointer-events: none;
-      border: 1px solid rgba(239, 224, 189, .18);
-      border-radius: 5px;
-    }
-
-    .panel > * {
-      position: relative;
-      z-index: 1;
-    }
-
     h1, h2, h3, p { margin: 0; }
 
     h1 {
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 1.7rem;
+      font-size: 1.55rem;
       line-height: 1.1;
-      color: #f3dfaa;
-      text-shadow: 0 2px 0 #140d08, 0 0 18px rgba(201, 163, 93, .28);
+      color: var(--text);
+      letter-spacing: 0;
     }
 
     h2 {
-      min-height: 42px;
-      padding: 9px 12px;
-      color: var(--ink);
-      background:
-        linear-gradient(90deg, rgba(255, 255, 255, .22), transparent 38%),
-        linear-gradient(180deg, #e8d6ae, #caa86f);
-      border: 1px solid #6d4b24;
-      border-radius: 7px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 2px 0 rgba(0, 0, 0, .36);
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 1.08rem;
+      color: var(--text);
+      font-size: 1rem;
       line-height: 1.2;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      font-weight: 760;
     }
 
     h3 {
@@ -150,40 +99,28 @@
       justify-content: space-between;
       gap: 12px;
       align-items: center;
-      padding: 4px 2px 0;
+      padding: 2px 0 4px;
     }
 
     .brand {
       display: grid;
-      gap: 8px;
+      gap: 4px;
     }
-
-    .mana-row {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-
-    .pip {
-      width: 24px;
-      height: 24px;
-      display: inline-grid;
-      place-items: center;
-      border-radius: 50%;
-      border: 1px solid rgba(0, 0, 0, .58);
-      color: #17110b;
-      font-size: .72rem;
-      font-weight: 900;
-      box-shadow: inset 0 1px 3px rgba(255, 255, 255, .5), inset 0 -2px 4px rgba(0, 0, 0, .34), 0 2px 5px rgba(0, 0, 0, .25);
-    }
-
-    .pip.w { background: var(--white); }
-    .pip.u { background: var(--blue); color: #07111b; }
-    .pip.b { background: var(--black); color: #e8d8bf; }
-    .pip.r { background: var(--red); color: #fff0dc; }
-    .pip.g { background: var(--green); color: #061108; }
 
     .install {
+      width: auto;
+      min-width: 112px;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .theme-toggle {
       width: auto;
       min-width: 112px;
     }
@@ -195,22 +132,15 @@
     }
 
     .cmc-grid button {
-      min-height: 54px;
-      border-radius: 50%;
-      aspect-ratio: 1;
-      justify-self: center;
-      width: min(100%, 58px);
-      font-size: 1.08rem;
-      background:
-        radial-gradient(circle at 35% 28%, #f8e9ba, #c9a35d 42%, #6f441f 100%);
-      border-color: #3a210d;
+      min-height: 46px;
+      font-size: 1rem;
     }
 
     button, input {
-      border: 1px solid #6d4b24;
+      border: 1px solid var(--line-strong);
       border-radius: 8px;
-      background: var(--paper);
-      color: var(--ink);
+      background: var(--surface);
+      color: var(--text);
       font: inherit;
     }
 
@@ -219,39 +149,46 @@
       padding: 10px 12px;
       font-weight: 750;
       cursor: pointer;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 2px 0 rgba(0, 0, 0, .35);
+      box-shadow: none;
     }
 
-    button:hover:not(:disabled) { filter: brightness(1.07) saturate(1.04); transform: translateY(-1px); }
+    button:hover:not(:disabled) { background: #eef4ff; border-color: #a9bde8; }
+    [data-theme="dark"] button:hover:not(:disabled) { background: #26364a; border-color: #667085; }
     button:disabled { opacity: .6; cursor: wait; }
 
     button.primary {
-      background: linear-gradient(180deg, #d8bd7f, #a77831);
-      color: #1d1208;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
     }
 
+    button.primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
+    [data-theme="dark"] button.primary { background: #2563eb; border-color: #2563eb; }
+    [data-theme="dark"] button.primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
+
     button.secondary {
-      background: linear-gradient(180deg, #415a73, #1a2a3a);
-      color: #f1e6ce;
-      border-color: #7893ad;
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--line-strong);
     }
 
     input {
       width: 100%;
       min-height: 44px;
       padding: 10px 12px;
-      box-shadow: inset 0 2px 5px rgba(0, 0, 0, .18);
+      box-shadow: none;
     }
 
     input:focus {
-      outline: 2px solid rgba(201, 163, 93, .72);
+      outline: 2px solid rgba(37, 99, 235, .28);
       outline-offset: 2px;
+      border-color: var(--accent);
     }
 
     label {
       display: grid;
       gap: 6px;
-      color: #eadbb8;
+      color: var(--muted);
       font-size: .88rem;
       font-weight: 700;
     }
@@ -276,7 +213,7 @@
     }
 
     .status.error { color: var(--danger); }
-    .status.good { color: #bde7ac; }
+    .status.good { color: var(--success); }
 
     .options {
       display: grid;
@@ -287,34 +224,52 @@
       display: grid;
       gap: 8px;
       padding: 12px;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, .16), transparent 28%),
-        var(--inset);
-      border: 1px solid #7c6039;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
       border-radius: 8px;
-      color: var(--ink);
-      box-shadow: inset 0 0 0 2px rgba(255, 246, 220, .24);
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    .choice {
+      grid-template-columns: 72px 1fr;
+      align-items: start;
+    }
+
+    .choice img {
+      width: 72px;
+      border-radius: 5px;
+      border: 1px solid var(--line);
+      background: #111827;
+    }
+
+    [data-theme="dark"] .choice img {
+      background: #0b1220;
+    }
+
+    .choice-body {
+      display: grid;
+      gap: 8px;
     }
 
     .choice-title, .history-title {
       font-weight: 800;
       line-height: 1.2;
-      font-family: Georgia, "Times New Roman", serif;
     }
 
     .meta {
-      color: #59452c;
+      color: var(--muted);
       font-size: .86rem;
       line-height: 1.35;
     }
 
     .oracle {
-      color: #2e2115;
+      color: var(--text);
       font-size: .88rem;
       line-height: 1.35;
       white-space: pre-line;
       padding-top: 6px;
-      border-top: 1px solid rgba(73, 50, 26, .28);
+      border-top: 1px solid var(--line);
     }
 
     .selected {
@@ -336,6 +291,55 @@
       grid-column: 1 / -1;
     }
 
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, .48);
+      z-index: 20;
+    }
+
+    .modal-backdrop.active {
+      display: grid;
+    }
+
+    .modal {
+      width: min(760px, 100%);
+      max-height: min(82vh, 760px);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .modal-list {
+      display: grid;
+      gap: 10px;
+      overflow: auto;
+      padding: 14px 16px 16px;
+    }
+
+    .modal-close {
+      width: 44px;
+      min-width: 44px;
+      padding: 0;
+      border-radius: 50%;
+    }
+
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
     }
@@ -345,6 +349,8 @@
       .topbar { align-items: start; }
       .row { grid-template-columns: 1fr; }
       .cmc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .choice { grid-template-columns: 58px 1fr; }
+      .choice img { width: 58px; }
     }
   </style>
 </head>
@@ -353,15 +359,11 @@
   <div class="topbar">
     <div class="brand">
       <h1>Momir Basic Printer</h1>
-      <div class="mana-row" aria-hidden="true">
-        <span class="pip w">W</span>
-        <span class="pip u">U</span>
-        <span class="pip b">B</span>
-        <span class="pip r">R</span>
-        <span class="pip g">G</span>
-      </div>
     </div>
-    <button id="installBtn" class="secondary install" hidden>Install</button>
+    <div class="top-actions">
+      <button id="themeToggle" class="secondary theme-toggle" type="button">Dark Mode</button>
+      <button id="installBtn" class="secondary install" hidden>Install</button>
+    </div>
   </div>
 
   <div class="grid">
@@ -377,19 +379,14 @@
         Token name
         <input id="tokenQuery" autocomplete="off" placeholder="Rat">
       </label>
-      <button id="tokenSearchBtn" class="secondary">Find Token</button>
-      <div id="tokenStatus" class="status"></div>
-      <div id="tokenOptions" class="options"></div>
-      <div id="selectedToken" class="selected">
-        <h3 id="selectedTokenName"></h3>
-        <div class="row">
-          <label>
-            Copies
-            <input id="tokenCopies" type="number" min="1" max="20" value="1">
-          </label>
-          <button id="tokenPrintBtn" class="primary">Print</button>
-        </div>
+      <div class="row">
+        <label>
+          Copies
+          <input id="tokenCopies" type="number" min="1" max="20" value="1">
+        </label>
+        <button id="tokenPrintBtn" class="primary">Print Card</button>
       </div>
+      <div id="tokenStatus" class="status"></div>
     </section>
 
     <section class="panel card-search">
@@ -398,19 +395,14 @@
         Card name
         <input id="cardQuery" autocomplete="off" placeholder="Sol Ring">
       </label>
-      <button id="cardSearchBtn" class="secondary">Find Card</button>
-      <div id="cardStatus" class="status"></div>
-      <div id="cardOptions" class="options"></div>
-      <div id="selectedCard" class="selected">
-        <h3 id="selectedCardName"></h3>
-        <div class="row">
-          <label>
-            Copies
-            <input id="cardCopies" type="number" min="1" max="20" value="1">
-          </label>
-          <button id="cardPrintBtn" class="primary">Print</button>
-        </div>
+      <div class="row">
+        <label>
+          Copies
+          <input id="cardCopies" type="number" min="1" max="20" value="1">
+        </label>
+        <button id="cardPrintBtn" class="primary">Print Card</button>
       </div>
+      <div id="cardStatus" class="status"></div>
     </section>
 
     <section class="panel history-panel">
@@ -420,30 +412,37 @@
   </div>
 </main>
 
+<div id="choiceModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Choose Print</h2>
+      <button id="modalClose" class="secondary modal-close" aria-label="Close">X</button>
+    </div>
+    <div id="modalList" class="modal-list"></div>
+  </div>
+</div>
+
 <script>
 let deferredPrompt = null;
-let selectedTokenId = null;
-let selectedCardId = null;
+let modalMode = null;
+let modalCopies = 1;
 
 const cmcGrid = document.getElementById('cmcGrid');
 const installBtn = document.getElementById('installBtn');
+const themeToggle = document.getElementById('themeToggle');
 const historyList = document.getElementById('historyList');
+const choiceModal = document.getElementById('choiceModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalList = document.getElementById('modalList');
+const modalClose = document.getElementById('modalClose');
 
 const tokenQuery = document.getElementById('tokenQuery');
-const tokenSearchBtn = document.getElementById('tokenSearchBtn');
 const tokenStatus = document.getElementById('tokenStatus');
-const tokenOptions = document.getElementById('tokenOptions');
-const selectedToken = document.getElementById('selectedToken');
-const selectedTokenName = document.getElementById('selectedTokenName');
 const tokenCopies = document.getElementById('tokenCopies');
 const tokenPrintBtn = document.getElementById('tokenPrintBtn');
 
 const cardQuery = document.getElementById('cardQuery');
-const cardSearchBtn = document.getElementById('cardSearchBtn');
 const cardStatus = document.getElementById('cardStatus');
-const cardOptions = document.getElementById('cardOptions');
-const selectedCard = document.getElementById('selectedCard');
-const selectedCardName = document.getElementById('selectedCardName');
 const cardCopies = document.getElementById('cardCopies');
 const cardPrintBtn = document.getElementById('cardPrintBtn');
 
@@ -460,6 +459,18 @@ function escapeHtml(text = '') {
 function setStatus(el, message, kind = '') {
   el.className = `status ${kind}`.trim();
   el.textContent = message || '';
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  themeToggle.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+  localStorage.setItem('momir-theme', theme);
+}
+
+function initialTheme() {
+  const saved = localStorage.getItem('momir-theme');
+  if (saved === 'light' || saved === 'dark') return saved;
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 function clampCopies(input) {
@@ -526,62 +537,73 @@ for (let i = 1; i <= 16; i++) {
   cmcGrid.appendChild(btn);
 }
 
-function renderTokenOptions(options = []) {
-  selectedTokenId = null;
-  selectedToken.classList.remove('active');
+function optionImage(option) {
+  return option.display_image_url || option.source_image || option.image_url || '';
+}
 
-  if (!options.length) {
-    tokenOptions.innerHTML = '';
-    return;
-  }
-
-  tokenOptions.innerHTML = options.map((token) => `
+function openChoiceModal(title, mode, options, copies) {
+  modalMode = mode;
+  modalCopies = copies;
+  modalTitle.textContent = title;
+  modalList.innerHTML = options.map((option) => `
     <div class="choice">
-      <div class="choice-title">${escapeHtml(token.name)}</div>
-      <div class="meta">${escapeHtml(token.color_text || (token.colors || []).join('') || 'Colorless')} | ${escapeHtml(token.pt || '?/?')}</div>
-      ${token.oracle_text ? `<div class="oracle">${escapeHtml(token.oracle_text)}</div>` : ''}
-      <button class="primary token-choice" data-token-id="${escapeHtml(token.id)}" data-token-name="${escapeHtml(token.name)}">Choose</button>
+      ${optionImage(option) ? `<img src="${escapeHtml(optionImage(option))}" alt="${escapeHtml(option.name)}">` : '<div></div>'}
+      <div class="choice-body">
+        <div class="choice-title">${escapeHtml(option.name)}</div>
+        <div class="meta">${optionMeta(option)}</div>
+        ${option.oracle_text ? `<div class="oracle">${escapeHtml(option.oracle_text)}</div>` : ''}
+        <button class="primary modal-choice" data-id="${escapeHtml(option.id)}">Choose & Print</button>
+      </div>
     </div>
   `).join('');
+  choiceModal.classList.add('active');
 }
 
-function chooseToken(id, name) {
-  selectedTokenId = id;
-  selectedTokenName.textContent = name;
-  selectedToken.classList.add('active');
-  setStatus(tokenStatus, 'Token selected.', 'good');
+function closeChoiceModal() {
+  choiceModal.classList.remove('active');
+  modalList.innerHTML = '';
+  modalMode = null;
 }
 
-async function findTokens() {
+function optionMeta(option) {
+  if (option.kind === 'token') {
+    return `${escapeHtml(option.color_text || (option.colors || []).join('') || 'Colorless')} | ${escapeHtml(option.pt || '?/?')}`;
+  }
+  return `Mana Value: ${escapeHtml(option.cmc)} | ${escapeHtml(option.type_line || '')}`;
+}
+
+async function printTokenById(tokenId, copies) {
+  const data = await postJson('/api/print-token', {token_id: tokenId, copies});
+  renderHistory(data.history || []);
+  setStatus(tokenStatus, `Printed ${data.item.name} x${data.printed}.`, 'good');
+  return data;
+}
+
+async function printCardById(cardId, copies) {
+  const data = await postJson('/api/print-card', {card_id: cardId, copies});
+  renderHistory(data.history || []);
+  setStatus(cardStatus, `Printed ${data.item.name} x${data.printed}.`, 'good');
+  return data;
+}
+
+async function handleTokenPrint() {
   const query = tokenQuery.value.trim();
   if (!query) return;
   setStatus(tokenStatus, 'Searching...');
-  tokenSearchBtn.disabled = true;
-  tokenOptions.innerHTML = '';
-  selectedToken.classList.remove('active');
+  tokenPrintBtn.disabled = true;
 
   try {
     const data = await postJson('/api/token-options', {query});
-    renderTokenOptions(data.options || []);
-    setStatus(tokenStatus, data.options?.length ? `Found ${data.options.length} option(s).` : 'No matching tokens found.', data.options?.length ? '' : 'error');
-  } catch (error) {
-    setStatus(tokenStatus, error.message, 'error');
-  } finally {
-    tokenSearchBtn.disabled = false;
-  }
-}
-
-async function printToken() {
-  if (!selectedTokenId) return;
-  setStatus(tokenStatus, 'Printing token...');
-  tokenPrintBtn.disabled = true;
-  try {
-    const data = await postJson('/api/print-token', {
-      token_id: selectedTokenId,
-      copies: clampCopies(tokenCopies)
-    });
-    renderHistory(data.history || []);
-    setStatus(tokenStatus, `Printed ${data.item.name} x${data.printed}.`, 'good');
+    const options = data.options || [];
+    if (!options.length) {
+      setStatus(tokenStatus, 'No matching tokens found.', 'error');
+    } else if (options.length === 1) {
+      setStatus(tokenStatus, 'Printing token...');
+      await printTokenById(options[0].id, clampCopies(tokenCopies));
+    } else {
+      setStatus(tokenStatus, `Found ${options.length} token options. Choose one to print.`);
+      openChoiceModal('Choose Token', 'token', options, clampCopies(tokenCopies));
+    }
   } catch (error) {
     setStatus(tokenStatus, error.message, 'error');
   } finally {
@@ -589,61 +611,24 @@ async function printToken() {
   }
 }
 
-function renderCardOptions(options = []) {
-  selectedCardId = null;
-  selectedCard.classList.remove('active');
-
-  if (!options.length) {
-    cardOptions.innerHTML = '';
-    return;
-  }
-
-  cardOptions.innerHTML = options.map((card) => `
-    <div class="choice">
-      <div class="choice-title">${escapeHtml(card.name)}</div>
-      <div class="meta">Mana Value: ${escapeHtml(card.cmc)} | ${escapeHtml(card.type_line || '')}</div>
-      <button class="primary card-choice" data-card-id="${escapeHtml(card.id)}" data-card-name="${escapeHtml(card.name)}">Choose</button>
-    </div>
-  `).join('');
-}
-
-function chooseCard(id, name) {
-  selectedCardId = id;
-  selectedCardName.textContent = name;
-  selectedCard.classList.add('active');
-  setStatus(cardStatus, 'Card selected.', 'good');
-}
-
-async function findCards() {
+async function handleCardPrint() {
   const query = cardQuery.value.trim();
   if (!query) return;
   setStatus(cardStatus, 'Searching...');
-  cardSearchBtn.disabled = true;
-  cardOptions.innerHTML = '';
-  selectedCard.classList.remove('active');
+  cardPrintBtn.disabled = true;
 
   try {
     const data = await postJson('/api/card-options', {query});
-    renderCardOptions(data.options || []);
-    setStatus(cardStatus, `Found ${data.options.length} option(s).`);
-  } catch (error) {
-    setStatus(cardStatus, error.message, 'error');
-  } finally {
-    cardSearchBtn.disabled = false;
-  }
-}
-
-async function printCard() {
-  if (!selectedCardId) return;
-  setStatus(cardStatus, 'Printing card...');
-  cardPrintBtn.disabled = true;
-  try {
-    const data = await postJson('/api/print-card', {
-      card_id: selectedCardId,
-      copies: clampCopies(cardCopies)
-    });
-    renderHistory(data.history || []);
-    setStatus(cardStatus, `Printed ${data.item.name} x${data.printed}.`, 'good');
+    const options = data.options || [];
+    if (!options.length) {
+      setStatus(cardStatus, 'No matching cards found.', 'error');
+    } else if (options.length === 1) {
+      setStatus(cardStatus, 'Printing card...');
+      await printCardById(options[0].id, clampCopies(cardCopies));
+    } else {
+      setStatus(cardStatus, `Found ${options.length} card options. Choose one to print.`);
+      openChoiceModal('Choose Card', 'card', options, clampCopies(cardCopies));
+    }
   } catch (error) {
     setStatus(cardStatus, error.message, 'error');
   } finally {
@@ -651,26 +636,38 @@ async function printCard() {
   }
 }
 
-tokenSearchBtn.addEventListener('click', findTokens);
-tokenPrintBtn.addEventListener('click', printToken);
-tokenOptions.addEventListener('click', (event) => {
-  const button = event.target.closest('.token-choice');
-  if (!button) return;
-  chooseToken(button.dataset.tokenId, button.dataset.tokenName);
-});
+tokenPrintBtn.addEventListener('click', handleTokenPrint);
 tokenQuery.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') findTokens();
+  if (event.key === 'Enter') handleTokenPrint();
 });
 
-cardSearchBtn.addEventListener('click', findCards);
-cardPrintBtn.addEventListener('click', printCard);
-cardOptions.addEventListener('click', (event) => {
-  const button = event.target.closest('.card-choice');
-  if (!button) return;
-  chooseCard(button.dataset.cardId, button.dataset.cardName);
-});
+cardPrintBtn.addEventListener('click', handleCardPrint);
 cardQuery.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') findCards();
+  if (event.key === 'Enter') handleCardPrint();
+});
+
+modalClose.addEventListener('click', closeChoiceModal);
+choiceModal.addEventListener('click', (event) => {
+  if (event.target === choiceModal) closeChoiceModal();
+});
+modalList.addEventListener('click', async (event) => {
+  const button = event.target.closest('.modal-choice');
+  if (!button || !modalMode) return;
+  button.disabled = true;
+  try {
+    if (modalMode === 'token') {
+      setStatus(tokenStatus, 'Printing token...');
+      await printTokenById(button.dataset.id, modalCopies);
+    } else {
+      setStatus(cardStatus, 'Printing card...');
+      await printCardById(button.dataset.id, modalCopies);
+    }
+    closeChoiceModal();
+  } catch (error) {
+    if (modalMode === 'token') setStatus(tokenStatus, error.message, 'error');
+    if (modalMode === 'card') setStatus(cardStatus, error.message, 'error');
+    button.disabled = false;
+  }
 });
 
 window.addEventListener('beforeinstallprompt', (event) => {
@@ -690,6 +687,12 @@ installBtn.addEventListener('click', async () => {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js').catch(() => {});
 }
+
+applyTheme(initialTheme());
+themeToggle.addEventListener('click', () => {
+  const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
 
 refreshHistory();
 setInterval(refreshHistory, 5000);
