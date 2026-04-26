@@ -49,36 +49,10 @@ def initialize_database(log_callback=None):
     IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
     if not has_internet():
-        log("Offline mode: using local database.")
+        log("No internet connection yet. The web UI is available, but card lookups need internet.")
         return
 
-    log("Checking for card database updates...")
-
-    needs_rebuild = not BULK_JSON.exists() or bulk_dataset_updated()
-    if needs_rebuild:
-        log("Updating Scryfall database...")
-        download_bulk_database()
-
-        log("Rebuilding searchable card index...")
-        build_sqlite_index()
-
-        log("Updating token database...")
-        build_token_database()
-
-    if not DB_FILE.exists() and BULK_JSON.exists():
-        log("Local DB missing, rebuilding...")
-        build_sqlite_index()
-
-    if not TOKEN_FILE.exists() and BULK_JSON.exists():
-        log("Token database missing, rebuilding...")
-        build_token_database()
-
-    log("Full image cache mode enabled. First startup may take a long time.")
-    log("Checking for missing card images...")
-    download_all_card_images()
-
-    log("Checking for missing token images...")
-    download_token_images()
+    log("Internet connection available. Using live Scryfall lookups and on-demand image caching.")
 
 
 def bulk_dataset_updated():
@@ -339,17 +313,19 @@ def ensure_card_image(card_id):
     if not has_internet():
         return None
 
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute("SELECT image FROM cards WHERE id=?", (card_id,))
-    row = cur.fetchone()
-    conn.close()
+    try:
+        response = session.get(f"https://api.scryfall.com/cards/{card_id}", timeout=20)
+        response.raise_for_status()
+        image_url = _card_image_url(response.json())
+    except Exception as e:
+        logging.warning("Card lookup failed for %s: %s", card_id, e)
+        return None
 
-    if not row or not row[0]:
+    if not image_url:
         return None
 
     try:
-        return download_card_image(card_id, row[0])
+        return download_card_image(card_id, image_url)
     except Exception as e:
         logging.warning("Card image download failed for %s: %s", card_id, e)
         return None

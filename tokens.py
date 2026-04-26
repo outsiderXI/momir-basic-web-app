@@ -2,20 +2,68 @@ import difflib
 import json
 import time
 
+import requests
 from rich.console import Console
 from rich.table import Table
 
 from config import DATA_DIR
-from input_utils import esc_input
-from printer import print_image
 
 TOKEN_FILE = DATA_DIR / "tokens.json"
 console = Console()
+SCRYFALL = "https://api.scryfall.com"
+
+
+def _card_image_url(card):
+    if "image_uris" in card:
+        return card["image_uris"].get("large") or card["image_uris"].get("normal")
+    for face in card.get("card_faces", []):
+        if "image_uris" in face:
+            return face["image_uris"].get("large") or face["image_uris"].get("normal")
+    return None
+
+
+def search_token_candidates_online(name, limit=18):
+    try:
+        response = requests.get(
+            f"{SCRYFALL}/cards/search",
+            params={
+                "q": f"{name} type:token game:paper",
+                "include_extras": "true",
+                "unique": "prints",
+                "order": "name",
+            },
+            timeout=20,
+        )
+        response.raise_for_status()
+    except Exception:
+        return []
+
+    tokens = []
+    for card in response.json().get("data", [])[:limit * 3]:
+        image = _card_image_url(card)
+        if not image:
+            continue
+        tokens.append(
+            {
+                "id": card["id"],
+                "name": card.get("name", ""),
+                "power": card.get("power"),
+                "toughness": card.get("toughness"),
+                "colors": card.get("colors", []),
+                "oracle_text": card.get("oracle_text", ""),
+                "image": image,
+                "local_image": None,
+                "set_name": card.get("set_name", ""),
+                "set_code": card.get("set", "").upper(),
+            }
+        )
+        if len(tokens) >= limit:
+            break
+    return tokens
 
 
 def load_tokens():
     if not TOKEN_FILE.exists():
-        console.print("[red]Token database missing.[/red]")
         return []
 
     with TOKEN_FILE.open("r", encoding="utf-8") as f:
@@ -142,6 +190,8 @@ def dedupe_token_variants(matches):
 
 
 def choose_from_list(matches):
+    from input_utils import esc_input
+
     unique_matches = dedupe_token_variants(matches)
 
     table = Table(title="Multiple token matches", border_style="magenta")
@@ -180,6 +230,9 @@ def choose_from_list(matches):
         console.print("[red]Invalid selection.[/red]")
 
 def print_multiple(path):
+    from input_utils import esc_input
+    from printer import print_image
+
     console.print()
     count_input = esc_input("How many copies? (default 1): ")
     if count_input is None:
@@ -203,6 +256,8 @@ def print_multiple(path):
 
 
 def select_token_from_name(name):
+    from input_utils import esc_input
+
     tokens = load_tokens()
     if not tokens:
         return None

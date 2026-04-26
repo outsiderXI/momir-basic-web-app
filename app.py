@@ -10,7 +10,7 @@ from typing import Any
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from config import DATA_DIR, IMAGE_DIR
-from downloader import ensure_card_image, initialize_database
+from downloader import download_card_image, ensure_card_image, initialize_database
 from printer import print_image, print_text_receipt
 from search import (
     cache_stats,
@@ -21,7 +21,14 @@ from search import (
     search_card_candidates,
 )
 from splash import MOMIR_QUOTES
-from tokens import dedupe_token_variants, filter_color, filter_pt, load_tokens, smart_match
+from tokens import (
+    dedupe_token_variants,
+    filter_color,
+    filter_pt,
+    load_tokens,
+    search_token_candidates_online,
+    smart_match,
+)
 
 APP_PORT = 5000
 APP_HOST = "0.0.0.0"
@@ -44,11 +51,14 @@ state: dict[str, Any] = {
     "history": deque(maxlen=MAX_HISTORY),
     "last_preview": None,
     "last_print": None,
+    "token_options": {},
 }
 
 
 class WebLogHandler(logging.Handler):
     def emit(self, record):
+        if record.name.startswith("werkzeug"):
+            return
         append_log(self.format(record))
 
 
@@ -89,14 +99,24 @@ def set_phase(phase: str, message: str | None = None):
 
 
 def get_local_ip() -> str | None:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    for target in ("8.8.8.8", "1.1.1.1"):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sock.connect((target, 80))
+            return sock.getsockname()[0]
+        except Exception:
+            pass
+        finally:
+            sock.close()
+
     try:
-        sock.connect(("8.8.8.8", 80))
-        return sock.getsockname()[0]
+        hostname = socket.gethostname()
+        ip = socket.gethostbyname(hostname)
+        if ip and not ip.startswith("127."):
+            return ip
     except Exception:
-        return None
-    finally:
-        sock.close()
+        pass
+    return None
 
 
 ASCII_BANNER = r"""
@@ -163,10 +183,7 @@ def token_option_payload(token: dict[str, Any]):
 
 def build_token_matches(name: str, pt: str = "", colors: str = ""):
     tokens = load_tokens()
-    if not tokens:
-        return []
-
-    matches = smart_match(tokens, name)
+    matches = smart_match(tokens, name) if tokens else search_token_candidates_online(name)
     if pt:
         filtered = filter_pt(matches, pt)
         if filtered:
@@ -179,11 +196,20 @@ def build_token_matches(name: str, pt: str = "", colors: str = ""):
 
     output = []
     for token in matches[:18]:
-        if not token.get("local_image"):
-            local = IMAGE_DIR / f"{token['id']}.jpg"
-            if local.exists():
+        local = token.get("local_image")
+        if not local:
+            local = ensure_card_image(token["id"])
+            if not local and token.get("image"):
+                try:
+                    local = download_card_image(token["id"], token["image"])
+                except Exception:
+                    local = None
+            if local:
                 token["local_image"] = str(local)
-        output.append(token_option_payload(token))
+        if token.get("local_image"):
+            output.append(token_option_payload(token))
+    with state_lock:
+        state["token_options"] = {item["id"]: item for item in output}
     return output
 
 
@@ -330,15 +356,23 @@ def api_select_token():
     tokens = load_tokens()
     token = next((t for t in tokens if t.get("id") == token_id), None)
     if not token:
+        with state_lock:
+            cached_option = state["token_options"].get(token_id)
+        if cached_option:
+            preview = dict(cached_option)
+            preview["copies"] = copies
+            with state_lock:
+                state["last_preview"] = preview
+            return jsonify({"ok": True, "preview": preview})
+    if not token:
         return jsonify({"ok": False, "error": "Token not found."}), 404
 
     local = token.get("local_image")
     if not local:
-        candidate = IMAGE_DIR / f"{token_id}.jpg"
-        if candidate.exists():
-            local = str(candidate)
+        local = ensure_card_image(token_id)
     if not local:
-        return jsonify({"ok": False, "error": "Token image is not cached yet."}), 404
+        return jsonify({"ok": False, "error": "Token image could not be downloaded."}), 404
+    token["local_image"] = str(local)
 
     preview = token_option_payload(token)
     preview["copies"] = copies
@@ -427,7 +461,7 @@ def api_history_preview():
 def startup_worker():
     set_phase("network", "Starting Momir Vig web appliance...")
     wait_for_network_and_print_url()
-    set_phase("initializing", "Starting database and cache checks...")
+    set_phase("initializing", "Checking internet availability...")
     initialize_database(log_callback=append_log)
     set_phase("ready", "System ready. Awaiting print commands.")
     with state_lock:
@@ -451,7 +485,6 @@ def ensure_startup_thread():
         startup_thread.start()
 
 
-ensure_startup_thread()
-
 if __name__ == "__main__":
+    ensure_startup_thread()
     app.run(host=APP_HOST, port=APP_PORT, debug=False, threaded=True)

@@ -1,7 +1,6 @@
 from pathlib import Path
 import time
 
-from escpos.printer import Usb
 from rich.console import Console
 from rich.panel import Panel
 
@@ -32,6 +31,8 @@ def _resolve_image_path(card_id_or_path):
 
 
 def _open_printer():
+    from escpos.printer import Usb
+
     return Usb(PRINTER_VENDOR_ID, PRINTER_PRODUCT_ID, profile=PRINTER_PROFILE)
 
 

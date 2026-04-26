@@ -7,7 +7,7 @@ A headless Raspberry Pi / Linux MTG thermal card printer that exposes a phone-fr
 - Boot the Raspberry Pi and Epson receipt printer with no screen or keyboard required
 - Wait for Wi-Fi / LAN connectivity
 - Print the Pi's local web URL on the receipt printer
-- Continue normal startup tasks such as refreshing the Scryfall database and caching images
+- Continue normal startup tasks such as checking internet availability
 - Serve a local web UI you can open from your phone, tablet, or laptop
 - Print random creatures by mana value, tokens, and normal cards from the browser
 
@@ -26,8 +26,7 @@ A headless Raspberry Pi / Linux MTG thermal card printer that exposes a phone-fr
 - Raspberry Pi with Wi-Fi
 - Epson TM-T88V or compatible ESC/POS USB receipt printer
 - USB connection between Pi and printer
-- Internet connection for the first full cache build or future database refreshes
-- Roughly 60 GB free storage if you want a large local image cache
+- Internet connection for card and token lookups
 
 ## Main entry points
 
@@ -73,16 +72,14 @@ You can:
 - reprint from recent history
 - use the install prompt to add the app to your phone's home screen
 
-## First startup behavior
+## Startup behavior
 
-The first startup may take a while. The app can:
+Startup is intentionally lightweight so it can run comfortably as a headless Raspberry Pi appliance. The app:
 
 1. Check internet availability
-2. Check whether the Scryfall bulk data changed
-3. Rebuild the SQLite search index if needed
-4. Rebuild the token database if needed
-5. Download missing card images
-6. Download missing token images
+2. Print the local web URL when the Pi has a network address
+3. Use live Scryfall lookups for Momir, token, and card searches
+4. Cache only the individual images that are previewed or printed
 
 The web UI shows the live startup log while this is happening.
 
@@ -125,7 +122,7 @@ journalctl -u momir-vig-web.service -f
 
 - The web app listens on port `5000` by default
 - Your phone or laptop must be on the same local network as the Pi
-- The browser UI uses cached assets and can be installed as a PWA, but printing still depends on the Pi and printer being online
+- The browser UI uses cached app assets and can be installed as a PWA, but card/token lookups and printing still depend on the Pi, internet, and printer being online
 - `print_image()` is wrapped with a lock in the web app so overlapping browser actions do not collide with the USB printer
 
 ## Project structure
@@ -136,7 +133,7 @@ journalctl -u momir-vig-web.service -f
 - `static/service-worker.js` - offline shell caching
 - `deploy/momir-vig-web.service` - systemd startup service
 - `printer.py` - image printing and receipt text printing
-- `downloader.py` - database/image initialization and caching
+- `downloader.py` - internet readiness and on-demand image caching
 
 ## Original terminal mode still works
 
