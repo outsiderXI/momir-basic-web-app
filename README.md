@@ -33,8 +33,8 @@ A headless Raspberry Pi / Linux MTG thermal card printer that exposes a phone-fr
 ## Install
 
 ```bash
-git clone https://github.com/outsiderXI/Momir-Vig-Printer.git
-cd Momir-Vig-Printer
+git clone https://github.com/outsiderXI/momir-basic-web-app.git
+cd momir-basic-web-app
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
